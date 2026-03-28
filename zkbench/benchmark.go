@@ -42,7 +42,7 @@ type BenchmarkOp struct {
 	Sync     func()         // post-op sync (optional, e.g., cuda_device_sync)
 	Metadata map[string]any // extra metadata (field, degree, etc.)
 
-	InputHash    string       // pre-computed input hash
+	InputHash    string        // pre-computed input hash
 	OutputHashFn func() string // returns output hash after timing (optional)
 	VerifyFn     func() bool   // returns true if output is correct (optional)
 }
@@ -142,21 +142,24 @@ func runSingleOp(op *BenchmarkOp, iterations, warmup int) BenchmarkResult {
 		timesUs[i] = float64(time.Since(start).Nanoseconds()) / 1000.0
 	}
 
-	mean, stdev, _ := CalculateStatistics(timesUs)
-	med, _ := Median(timesUs)
-	lower, upper := CalculateConfidenceInterval(mean, stdev, 0.95)
-
-	lower = roundTo2(lower)
-	upper = roundTo2(upper)
-
 	result := BenchmarkResult{
-		Latency: &MetricValue{
+		Iterations: iterations,
+	}
+
+	if iterations > 0 {
+		mean, stdev, _ := CalculateStatistics(timesUs)
+		med, _ := Median(timesUs)
+		lower, upper := CalculateConfidenceInterval(mean, stdev, 0.95)
+
+		lower = roundTo2(lower)
+		upper = roundTo2(upper)
+
+		result.Latency = &MetricValue{
 			Value:      roundTo2(med),
 			Unit:       "us",
 			LowerValue: &lower,
 			UpperValue: &upper,
-		},
-		Iterations: iterations,
+		}
 	}
 
 	if len(op.Metadata) > 0 {
